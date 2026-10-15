@@ -1,4 +1,4 @@
-
+```python
 import os
 import logging
 import requests
@@ -25,8 +25,33 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "⭐ Brawl Stats Bot\n\n"
         "Я помогу изучить твой аккаунт Brawl Stars!\n\n"
         "Отправь тег так:\n"
-        "/player #ТВОЙТЕГ"
+        "/player #ТВОЙТЕГ\n\n"
+        "Узнать внешний IP сервера:\n"
+        "/ip"
     )
+
+
+async def ip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        response = requests.get(
+            "https://api.ipify.org",
+            timeout=10,
+        )
+        response.raise_for_status()
+
+        ip = response.text.strip()
+
+        await update.message.reply_text(
+            f"🌐 Внешний IP сервера FadeHost:\n{ip}"
+        )
+
+    except requests.RequestException as e:
+        logging.exception("IP lookup failed")
+        await update.message.reply_text(
+            "❌ Не удалось узнать IP сервера.\n"
+            f"Ошибка: {type(e).__name__}\n"
+            "Возможно, хост блокирует внешние запросы."
+        )
 
 
 async def player(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -123,9 +148,11 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("player", player))
+    app.add_handler(CommandHandler("ip", ip_command))
 
     app.run_polling()
 
 
 if __name__ == "__main__":
     main()
+```
