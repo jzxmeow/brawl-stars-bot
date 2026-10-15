@@ -22,8 +22,8 @@ API_URL = "https://api.brawlstars.com/v1"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "⭐ Brawl Stats Bot\n\n"
-        "Я помогу изучить твой аккаунт Brawl Stars!\n\n"
+        "💎 Привет! Это MetaHelperBS! от @jzxmeowq / @hhheavdn\n\n"
+        "Я покажу статистику твоего аккаунта в Brawl Stars и помогу с прокачкой!\n\n"
         "Отправь тег так:\n"
         "/player #ТВОЙТЕГ"
     )
