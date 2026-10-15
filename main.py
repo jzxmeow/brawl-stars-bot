@@ -30,21 +30,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/ip"
     )
 
-
-async def ip_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        response = requests.get(
-            "https://api.ipify.org",
-            timeout=10,
-        )
-        response.raise_for_status()
-
-        ip = response.text.strip()
-
-        await update.message.reply_text(
-            f"🌐 Внешний IP сервера FadeHost:\n{ip}"
-        )
-
     except requests.RequestException as e:
         logging.exception("IP lookup failed")
         await update.message.reply_text(
@@ -147,8 +132,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("player", player))
-    app.add_handler(CommandHandler("ip", ip_command))
+    app.add_handler(CommandHandler("player", player)) 
 
     app.run_polling()
 
