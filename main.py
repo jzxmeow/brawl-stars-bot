@@ -25,18 +25,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "⭐ Brawl Stats Bot\n\n"
         "Я помогу изучить твой аккаунт Brawl Stars!\n\n"
         "Отправь тег так:\n"
-        "/player #ТВОЙТЕГ\n\n"
-        "Узнать внешний IP сервера:\n"
-        "/ip"
+        "/player #ТВОЙТЕГ"
     )
-
-    except requests.RequestException as e:
-        logging.exception("IP lookup failed")
-        await update.message.reply_text(
-            "❌ Не удалось узнать IP сервера.\n"
-            f"Ошибка: {type(e).__name__}\n"
-            "Возможно, хост блокирует внешние запросы."
-        )
 
 
 async def player(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -132,7 +122,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("player", player)) 
+    app.add_handler(CommandHandler("player", player))
 
     app.run_polling()
 
