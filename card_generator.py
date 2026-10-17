@@ -399,7 +399,7 @@ def generate_cards(player, brawlers, mode):
             continue
 
         portrait_path = portraits.get(_key(name))
-        _draw_portrait(base, portrait_path, x + 4, y + 3, CELL_W - 8, 47)
+        _draw_portrait(base, portrait_path, x + 5, y + 3, 42, 42)
 
         draw = ImageDraw.Draw(base)
         _draw_centered_text_with_emoji(
