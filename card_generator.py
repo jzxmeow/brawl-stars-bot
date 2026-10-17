@@ -36,23 +36,25 @@ RARITY_COLORS = {
 RARITY_GROUPS = {
     "common": ["Shelly"],
     "rare": ["Colt", "Bull", "Brock", "Barley", "Nita", "El Primo", "Poco", "Rosa"],
-    "super_rare": ["8-Bit", "Carl", "Darryl", "Dynamike", "Gus", "Jacky", "Jessie", "Penny", "Rico", "Tick"],
+    "super_rare": [
+        "Rico", "Jessie", "Dynamike", "Darryl", "Penny", "Tick", "Carl", "8-Bit", "Jacky", "Gus",
+    ],
     "epic": [
-        "Bo", "Stu", "Angelo", "Ash", "Edgar", "Emz", "Griff", "Colette", "Pearl", "Piper",
-        "Shade", "Belle", "Bibi", "Mandy", "Nani", "Larry & Lawrie", "Maisie", "Bonnie",
-        "Berry", "Hank", "Bea", "Frank", "Gale", "Lola", "Trunk", "Pam", "Sam", "Grom",
-        "Bolt", "Meeple",
+        "Bo", "Piper", "Pam", "Frank", "Bibi", "Bea", "Emz", "Gale", "Nani", "Colette",
+        "Edgar", "Stu", "Belle", "Grom", "Griff", "Ash", "Lola", "Bonnie", "Sam", "Mandy",
+        "Maisie", "Hank", "Pearl", "Larry & Lawrie", "Angelo", "Berry", "Shade", "Meeple",
+        "Trunk", "Bolt",
     ],
     "mythic": [
-        "Lumi", "Max", "Starr Nova", "Byron", "Gene", "Gray", "Lou", "Mortis", "Otis", "Ruffs",
-        "Damian", "Charlie", "Fang", "Finx", "Lily", "Moe", "Najia", "Sprout", "Tara", "Buster",
-        "Buzz", "Melodie", "R-T", "Gigi", "Glowy", "Jae-Yong", "Juju", "Squeak", "Willow",
-        "Ziggy", "Chuck", "Clancy", "Mr. P", "Eve", "Janet", "Alli", "Doug", "Mico", "Ollie",
-        "Vince", "Cosmo", "Wendy",
+        "Mortis", "Tara", "Gene", "Mr. P", "Max", "Sprout", "Lou", "Byron", "Ruffs", "Squeak",
+        "Buzz", "Fang", "Eve", "Janet", "Otis", "Buster", "Gray", "R-T", "Willow", "Doug",
+        "Chuck", "Charlie", "Mico", "Melodie", "Lily", "Clancy", "Moe", "Juju", "Ollie", "Lumi",
+        "Finx", "Jae-Yong", "Alli", "Mina", "Ziggy", "Gigi", "Glowy", "Najia", "Damian",
+        "Starr Nova", "Wendy", "Cosmo", "Vince",
     ],
     "legendary": [
-        "Meg", "Nori", "Surge", "Amber", "Leon", "Crow", "Cordelius", "Kenji", "Kit", "Spike",
-        "Chester", "Pierce", "Draco", "Sandy",
+        "Spike", "Crow", "Leon", "Sandy", "Surge", "Amber", "Meg", "Chester", "Cordelius",
+        "Kit", "Draco", "Kenji", "Pierce", "Nori",
     ],
     "ultra": ["Kaze", "Sirius"],
 }
