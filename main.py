@@ -24,6 +24,8 @@ def api_get(path):
     response = requests.get(f"{API_URL}{path}", headers=HEADERS, timeout=20)
     if response.status_code == 200:
         return response.json(), None
+    logging.warning("Brawl API returned HTTP %s for path %s: %s",
+                    response.status_code, path, response.text[:300])
     return None, response.status_code
 
 
@@ -86,22 +88,17 @@ async def generate_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
         _, mode, tag = query.data.split(":", 2)
         status_message = await query.message.reply_text("🎨 Собираю портреты и статистику…")
 
+        # The player endpoint already returns the player's brawlers.
+        # Use that response rather than making a second endpoint request.
         player_data, error = api_get(f"/players/%23{quote(tag, safe='')}")
         if error:
             await status_message.edit_text(format_api_error(error))
             return
 
-        brawlers_data, error = api_get(
-            f"/players/%23{quote(tag, safe='')}/brawlers?limit=100"
-        )
-        if error:
-            await status_message.edit_text(format_api_error(error))
-            return
-
-        brawlers = brawlers_data.get("items", [])
+        brawlers = player_data.get("brawlers", [])
         if not brawlers:
             await status_message.edit_text(
-                "Не удалось получить бойцов аккаунта. Попробуй ещё раз чуть позже."
+                "API не вернул список бойцов этого аккаунта. Проверь ответ API и логи FadeHost."
             )
             return
 
