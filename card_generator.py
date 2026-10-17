@@ -179,6 +179,9 @@ def _draw_text_with_emoji(canvas, xy, text, font, fill):
     )
     for char in str(text):
         cp = ord(char)
+        # Variation selectors, joiners and skin-tone modifiers should not become tofu boxes.
+        if cp in (0xFE0E, 0xFE0F, 0x200D) or 0x1F3FB <= cp <= 0x1F3FF:
+            continue
         is_emoji = any(start <= cp <= end for start, end in emoji_ranges)
         if is_emoji:
             code = f"{cp:x}"
@@ -204,6 +207,29 @@ def _draw_text_with_emoji(canvas, xy, text, font, fill):
             box = draw.textbbox((0, 0), char, font=font)
             advance = box[2] - box[0]
         x += max(1, advance)
+
+
+def _draw_centered_text_with_emoji(canvas, center_x, y, text, font, fill, max_width):
+    """Center a nickname/label while reserving space for image-rendered emoji."""
+    width = 0
+    draw = ImageDraw.Draw(canvas)
+    emoji_ranges = ((0x1F000, 0x1FAFF), (0x2600, 0x27BF), (0x2300, 0x23FF))
+    for char in str(text):
+        cp = ord(char)
+        if cp in (0xFE0E, 0xFE0F, 0x200D) or 0x1F3FB <= cp <= 0x1F3FF:
+            continue
+        if any(start <= cp <= end for start, end in emoji_ranges):
+            width += font.size + 3
+        else:
+            try:
+                width += draw.textlength(char, font=font)
+            except AttributeError:
+                box = draw.textbbox((0, 0), char, font=font)
+                width += box[2] - box[0]
+    if width > max_width:
+        text = _fit_text(draw, text, font, max_width)
+        width = min(width, max_width)
+    _draw_text_with_emoji(canvas, (center_x - width / 2, y), text, font, fill)
 
 
 def _resource_icon(canvas, filename, x, y, size):
@@ -373,13 +399,10 @@ def generate_cards(player, brawlers, mode):
         _draw_portrait(base, portrait_path, x + 4, y + 3, CELL_W - 8, 47)
 
         draw = ImageDraw.Draw(base)
-        _centered(
-            draw,
-            (x + CELL_W / 2, y + 49),
+        _draw_centered_text_with_emoji(
+            base, x + CELL_W / 2, y + 49,
             _fit_text(draw, name, _font(11, True), CELL_W - 8),
-            _font(11, True),
-            "#ffffff",
-            CELL_W - 8,
+            _font(11, True), "#ffffff", CELL_W - 8,
         )
 
         value = int(brawler.get(metric_key, 0) or 0)
