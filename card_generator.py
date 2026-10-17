@@ -21,6 +21,47 @@ GAP_X = 8
 GAP_Y = 8
 FOOTER_Y = 1045
 
+# Muted versions of the game's recognizable rarity colors.
+RARITY_COLORS = {
+    "common":     {"fill": (31, 65, 83, 244), "outline": (65, 125, 154, 245)},
+    "rare":       {"fill": (34, 72, 51, 244), "outline": (69, 132, 86, 245)},
+    "super_rare": {"fill": (30, 57, 91, 244), "outline": (66, 112, 171, 245)},
+    "epic":       {"fill": (63, 35, 87, 244), "outline": (126, 77, 163, 245)},
+    "mythic":     {"fill": (91, 35, 48, 244), "outline": (171, 70, 91, 245)},
+    "legendary":  {"fill": (92, 69, 26, 244), "outline": (172, 132, 49, 245)},
+    "ultra":      {"fill": (35, 72, 75, 244), "outline": (74, 151, 154, 245)},
+}
+
+# Rarity isn't included in the player endpoint, so keep a local name lookup.
+RARITY_GROUPS = {
+    "common": ["Shelly"],
+    "rare": ["Colt", "Bull", "Brock", "Barley", "Nita", "El Primo", "Poco", "Rosa"],
+    "super_rare": ["8-Bit", "Carl", "Darryl", "Dynamike", "Gus", "Jacky", "Jessie", "Penny", "Rico", "Tick"],
+    "epic": [
+        "Bo", "Stu", "Angelo", "Ash", "Edgar", "Emz", "Griff", "Colette", "Pearl", "Piper",
+        "Shade", "Belle", "Bibi", "Mandy", "Nani", "Larry & Lawrie", "Maisie", "Bonnie",
+        "Berry", "Hank", "Bea", "Frank", "Gale", "Lola", "Trunk", "Pam", "Sam", "Grom",
+        "Bolt", "Meeple",
+    ],
+    "mythic": [
+        "Lumi", "Max", "Starr Nova", "Byron", "Gene", "Gray", "Lou", "Mortis", "Otis", "Ruffs",
+        "Damian", "Charlie", "Fang", "Finx", "Lily", "Moe", "Najia", "Sprout", "Tara", "Buster",
+        "Buzz", "Melodie", "R-T", "Gigi", "Glowy", "Jae-Yong", "Juju", "Squeak", "Willow",
+        "Ziggy", "Chuck", "Clancy", "Mr. P", "Eve", "Janet", "Alli", "Doug", "Mico", "Ollie",
+        "Vince", "Cosmo", "Wendy",
+    ],
+    "legendary": [
+        "Meg", "Nori", "Surge", "Amber", "Leon", "Crow", "Cordelius", "Kenji", "Kit", "Spike",
+        "Chester", "Pierce", "Draco", "Sandy",
+    ],
+    "ultra": ["Kaze", "Sirius"],
+}
+RARITY_BY_NAME = {
+    name: rarity
+    for rarity, names in RARITY_GROUPS.items()
+    for name in names
+}
+
 
 def _font(size, bold=False):
     candidates = []
@@ -151,8 +192,15 @@ def generate_cards(player, brawlers, mode):
         is_filled = i < len(sorted_brawlers)
 
         if is_filled:
-            fill = (25, 21, 43, 244)
-            outline = (91, 65, 125, 235)
+            brawler = sorted_brawlers[i]
+            name = str(brawler.get("name", "Unknown"))
+            rarity = RARITY_BY_NAME.get(name, "")
+            palette = RARITY_COLORS.get(
+                rarity,
+                {"fill": (29, 24, 43, 244), "outline": (78, 61, 103, 235)},
+            )
+            fill = palette["fill"]
+            outline = palette["outline"]
         else:
             fill = (29, 23, 45, 210)
             outline = (62, 45, 83, 190)
@@ -170,8 +218,6 @@ def generate_cards(player, brawlers, mode):
             _centered(draw, (x + CELL_W / 2, y + 55), "—", _font(15, True), "#6e5b82")
             continue
 
-        brawler = sorted_brawlers[i]
-        name = str(brawler.get("name", "Unknown"))
         portrait_path = portraits.get(_key(name))
         _draw_portrait(base, portrait_path, x + 4, y + 3, CELL_W - 8, 47)
 
