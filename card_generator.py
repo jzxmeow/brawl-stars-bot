@@ -11,17 +11,17 @@ RESOURCES_DIR = ROOT / "resourses"
 
 # One landscape image with exactly 108 slots: 12 columns x 9 rows.
 WIDTH = 1920
-HEIGHT = 1080
+HEIGHT = 1120
 COLUMNS = 12
 ROWS = 9
 SLOTS = COLUMNS * ROWS
 MARGIN_X = 24
-GRID_TOP = 158
-CELL_W = 148
-CELL_H = 88
-GAP_X = 8
-GAP_Y = 8
-FOOTER_Y = 1045
+GRID_TOP = 150
+CELL_W = 150
+CELL_H = 96
+GAP_X = 6
+GAP_Y = 4
+FOOTER_Y = 1090
 
 # Muted versions of the game's recognizable rarity colors.
 RARITY_COLORS = {
@@ -290,7 +290,7 @@ def _has_hypercharge(brawler):
 def _draw_power_badge(canvas, brawler, cell_x, cell_y):
     """Draw a clearly visible power badge in the top-right corner of each brawler cell."""
     value = int(brawler.get("power", 0) or 0)
-    size = 34
+    size = 50 if value == 11 and _has_hypercharge(brawler) else 44
     x = cell_x + CELL_W - size - 4
     y = cell_y + 3
 
@@ -322,7 +322,7 @@ def _draw_power_badge(canvas, brawler, cell_x, cell_y):
     badge_draw = ImageDraw.Draw(canvas)
     badge_draw.ellipse((x, y, x + size - 1, y + size - 1),
                        fill=(0, 0, 0, 245), outline=(255, 255, 255, 230), width=1)
-    font = _font(10, True)
+    font = _font(13, True)
     box = badge_draw.textbbox((0, 0), str(value), font=font)
     text_w, text_h = box[2] - box[0], box[3] - box[1]
     badge_draw.text((x + (size - text_w) / 2, y + (size - text_h) / 2 - box[1]),
@@ -478,33 +478,33 @@ def generate_cards(player, brawlers, mode):
         )
 
         if not is_filled:
-            _centered(draw, (x + CELL_W / 2, y + 12), "?", _font(33, True), "#625078")
-            _centered(draw, (x + CELL_W / 2, y + 55), "—", _font(15, True), "#6e5b82")
+            _centered(draw, (x + CELL_W / 2, y + 15), "?", _font(36, True), "#625078")
+            _centered(draw, (x + CELL_W / 2, y + 63), "—", _font(17, True), "#6e5b82")
             continue
 
         portrait_path = portraits.get(_key(name))
         portrait_x, portrait_y = x + 5, y + 3
-        _draw_portrait(base, portrait_path, portrait_x, portrait_y, 42, 42)
+        _draw_portrait(base, portrait_path, portrait_x, portrait_y, 50, 50)
         if mode == "power":
             _draw_power_badge(base, brawler, x, y)
 
         draw = ImageDraw.Draw(base)
         _draw_centered_text_with_emoji(
-            base, x + CELL_W / 2, y + 49,
-            _fit_text(draw, name, _font(11, True), CELL_W - 8),
-            _font(11, True), "#ffffff", CELL_W - 8,
+            base, x + CELL_W / 2, y + 58,
+            _fit_text(draw, name, _font(13, True), CELL_W - 8),
+            _font(13, True), "#ffffff", CELL_W - 8,
         )
 
         value = int(brawler.get(metric_key, 0) or 0)
         if mode == "trophies":
             label = f"{value:,}".replace(",", " ")
             draw.rounded_rectangle(
-                (x + 8, y + 68, x + CELL_W - 8, y + 84),
+                (x + 8, y + 77, x + CELL_W - 8, y + 92),
                 radius=6,
                 fill=(130, 86, 30, 255),
             )
-            _resource_icon(base, "icon_trophy.png", x + 17, y + 68, 15)
-            _centered(draw, (x + CELL_W / 2 + 8, y + 68), label, _font(11, True), "#ffffff", CELL_W - 36)
+            _resource_icon(base, "icon_trophy.png", x + 17, y + 77, 15)
+            _centered(draw, (x + CELL_W / 2 + 8, y + 77), label, _font(12, True), "#ffffff", CELL_W - 36)
 
     draw = ImageDraw.Draw(base)
     draw.text(
