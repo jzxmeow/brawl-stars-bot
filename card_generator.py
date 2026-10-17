@@ -287,12 +287,12 @@ def _has_hypercharge(brawler):
     return _key(brawler.get("name", "")) in HYPERCHARGE_BRAWLERS
 
 
-def _draw_power_badge(canvas, brawler, portrait_x, portrait_y):
-    """Show the supplied Power 11 badge or a black level circle on the portrait."""
+def _draw_power_badge(canvas, brawler, cell_x, cell_y):
+    """Draw a clearly visible power badge in the top-right corner of each brawler cell."""
     value = int(brawler.get("power", 0) or 0)
-    size = 18
-    x = portrait_x + 42 - size + 1
-    y = portrait_y - 1
+    size = 34
+    x = cell_x + CELL_W - size - 4
+    y = cell_y + 3
 
     if value == 11:
         filename = (
@@ -304,8 +304,15 @@ def _draw_power_badge(canvas, brawler, portrait_x, portrait_y):
         if path.exists():
             try:
                 with Image.open(path) as source:
-                    badge = source.convert("RGBA")
-                badge = ImageOps.fit(badge, (size, size), method=Image.Resampling.LANCZOS)
+                    art = source.convert("RGBA")
+                # Preserve the full icon instead of cropping it; larger canvas
+                # makes the Hypercharge badge easier to recognize.
+                art.thumbnail((size, size), Image.Resampling.LANCZOS)
+                badge = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+                badge.alpha_composite(
+                    art,
+                    ((size - art.width) // 2, (size - art.height) // 2),
+                )
                 canvas.alpha_composite(badge, (int(x), int(y)))
                 return
             except (OSError, ValueError):
@@ -479,7 +486,7 @@ def generate_cards(player, brawlers, mode):
         portrait_x, portrait_y = x + 5, y + 3
         _draw_portrait(base, portrait_path, portrait_x, portrait_y, 42, 42)
         if mode == "power":
-            _draw_power_badge(base, brawler, portrait_x, portrait_y)
+            _draw_power_badge(base, brawler, x, y)
 
         draw = ImageDraw.Draw(base)
         _draw_centered_text_with_emoji(
