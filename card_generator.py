@@ -180,18 +180,17 @@ def _draw_power_resource_summary(canvas, draw, brawlers):
     )
     hypercharges = _item_count(brawlers, ("hypercharge", "hyperCharge", "hypercharges"))
 
+    # Compact 2-column x 2-row layout, aligned consistently in the header.
+    # Left column: gadgets above star powers. Right column: gears above hypercharges.
     items = [
-        ("gadget.png", f"{gadgets}/216"),
-        ("starpower.png", f"{star_powers}/216"),
-        ("gear.png", f"{gears}"),
-        ("hypercharge.png", f"{hypercharges}/104" if has_hypercharge_field else "н/д"),
+        (850, 42, "gadget.png", f"{gadgets}/216"),
+        (850, 84, "starpower.png", f"{star_powers}/216"),
+        (1100, 42, "gear.png", f"{gears}"),
+        (1100, 84, "hypercharge.png", f"{hypercharges}/104" if has_hypercharge_field else "н/д"),
     ]
-    start_x = 850
-    item_w = 178
-    for i, (filename, label) in enumerate(items):
-        x = start_x + i * item_w
-        _resource_icon(canvas, filename, x, 50, 30)
-        draw.text((x + 36, 56), label, font=_font(17, True), fill="#f0e7ff")
+    for x, y, filename, label in items:
+        _resource_icon(canvas, filename, x, y, 28)
+        draw.text((x + 36, y + 6), label, font=_font(17, True), fill="#f0e7ff")
 
 
 def _draw_portrait(canvas, path, x, y, max_w, max_h):
