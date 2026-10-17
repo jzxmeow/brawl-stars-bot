@@ -87,6 +87,14 @@ def _key(value):
     return re.sub(r"[^a-z0-9]", "", str(value).lower())
 
 
+# The official Supercell API returns brawler names in uppercase (e.g. SHELLY).
+# Normalize names so capitalization and punctuation don't prevent rarity matching.
+RARITY_BY_KEY = {
+    _key(name): rarity
+    for name, rarity in RARITY_BY_NAME.items()
+}
+
+
 def _portrait_index():
     index = {}
     if PORTRAITS_DIR.exists():
@@ -196,7 +204,7 @@ def generate_cards(player, brawlers, mode):
         if is_filled:
             brawler = sorted_brawlers[i]
             name = str(brawler.get("name", "Unknown"))
-            rarity = RARITY_BY_NAME.get(name, "")
+            rarity = RARITY_BY_KEY.get(_key(name), "")
             palette = RARITY_COLORS.get(
                 rarity,
                 {"fill": (29, 24, 43, 244), "outline": (78, 61, 103, 235)},
