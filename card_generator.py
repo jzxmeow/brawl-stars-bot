@@ -3,7 +3,7 @@ import re
 import requests
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 ROOT = Path(__file__).resolve().parent
 PORTRAITS_DIR = ROOT / "portraits"
@@ -155,16 +155,13 @@ def _draw_player_avatar(canvas, player, x, y, size):
         fallback_draw = ImageDraw.Draw(avatar)
         _centered(fallback_draw, (size / 2, size / 13), "?", _font(38, True), "#eee5ff")
 
-    avatar.thumbnail((size, size), Image.Resampling.LANCZOS)
-    square = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    square.alpha_composite(avatar, ((size - avatar.width) // 2, (size - avatar.height) // 2))
-    mask = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(mask).ellipse((1, 1, size - 2, size - 2), fill=255)
-    square.putalpha(mask)
-    canvas.alpha_composite(square, (x, y))
-    ImageDraw.Draw(canvas).ellipse(
+    avatar = avatar.convert("RGBA")
+    avatar = ImageOps.fit(avatar, (size, size), method=Image.Resampling.LANCZOS)
+    canvas.alpha_composite(avatar, (x, y))
+    # Thin black square outline fitted exactly around the avatar.
+    ImageDraw.Draw(canvas).rectangle(
         (x, y, x + size - 1, y + size - 1),
-        outline=(177, 132, 236, 255),
+        outline=(0, 0, 0, 255),
         width=3,
     )
 
@@ -299,10 +296,16 @@ def _draw_portrait(canvas, path, x, y, max_w, max_h):
     try:
         with Image.open(path) as source:
             portrait = source.convert("RGBA")
-        portrait.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
-        px = x + (max_w - portrait.width) // 2
-        py = y + (max_h - portrait.height) // 2
-        canvas.alpha_composite(portrait, (px, py))
+        portrait = ImageOps.fit(
+            portrait, (max_w, max_h), method=Image.Resampling.LANCZOS
+        )
+        canvas.alpha_composite(portrait, (x, y))
+        # Thin black square border exactly around the character portrait.
+        ImageDraw.Draw(canvas).rectangle(
+            (x, y, x + max_w - 1, y + max_h - 1),
+            outline=(0, 0, 0, 255),
+            width=2,
+        )
         return True
     except (OSError, ValueError):
         return False
