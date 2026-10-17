@@ -107,6 +107,21 @@ def _portrait_index():
 
 
 def _background():
+    # Use the custom background uploaded to the repository resources folder.
+    background_path = RESOURCES_DIR / "yiuDhs4ftqkUwdHbwgcE.png"
+    if background_path.exists():
+        try:
+            with Image.open(background_path) as source:
+                return ImageOps.fit(
+                    source.convert("RGB"),
+                    (WIDTH, HEIGHT),
+                    method=Image.Resampling.LANCZOS,
+                    centering=(0.5, 0.5),
+                )
+        except (OSError, ValueError):
+            pass
+
+    # Keep a gradient fallback if the custom image cannot be loaded.
     image = Image.new("RGB", (WIDTH, HEIGHT), "#100d1c")
     pixels = image.load()
     top = (13, 12, 29)
