@@ -96,6 +96,27 @@ RARITY_BY_KEY = {
     for name, rarity in RARITY_BY_NAME.items()
 }
 
+# Brawlers whose Hypercharge exists in-game. The player API doesn't reliably
+# expose Hypercharge ownership, so also check any field present in the response.
+HYPERCHARGE_BRAWLERS = {
+    _key(name) for name in [
+        "Shelly", "Colt", "Bull", "Brock", "Jessie", "Nita", "Dynamike",
+        "Tick", "Rico", "Jacky", "Penny", "Carl", "8-Bit", "Bo", "Emz",
+        "Stu", "El Primo", "Rosa", "Barley", "Poco", "Frank", "Bibi",
+        "Bea", "Nani", "Edgar", "Griff", "Grom", "Bonnie", "Ash", "Lola",
+        "Sam", "Mandy", "Maisie", "Hank", "Pearl", "Larry & Lawrie",
+        "Angelo", "Berry", "Shade", "Meeple", "Mortis", "Tara", "Gene",
+        "Max", "Sprout", "Lou", "Byron", "Ruffs", "Squeak", "Buzz", "Fang",
+        "Eve", "Janet", "Otis", "Buster", "Gray", "R-T", "Willow", "Doug",
+        "Chuck", "Charlie", "Mico", "Melodie", "Lily", "Clancy", "Moe",
+        "Juju", "Ollie", "Lumi", "Finx", "Jae-Yong", "Alli", "Mina",
+        "Ziggy", "Gigi", "Glowy", "Najia", "Damian", "Starr Nova", "Wendy",
+        "Cosmo", "Vince", "Spike", "Crow", "Leon", "Sandy", "Surge", "Amber",
+        "Meg", "Chester", "Cordelius", "Kit", "Draco", "Kenji", "Pierce",
+        "Nori", "Kaze", "Sirius",
+    ]
+}
+
 
 def _portrait_index():
     index = {}
@@ -260,6 +281,49 @@ def _resource_icon(canvas, filename, x, y, size):
         return False
 
 
+def _has_hypercharge(brawler):
+    for key in ("hypercharge", "hyperCharge", "hypercharges"):
+        value = brawler.get(key)
+        if value:
+            return True
+    return _key(brawler.get("name", "")) in HYPERCHARGE_BRAWLERS
+
+
+def _draw_power_badge(canvas, brawler, portrait_x, portrait_y):
+    """Show the supplied Power 11 badge or a black level circle on the portrait."""
+    value = int(brawler.get("power", 0) or 0)
+    size = 18
+    x = portrait_x + 42 - size + 1
+    y = portrait_y - 1
+
+    if value == 11:
+        filename = (
+            "Picsart_26-10-17_23-40-21-172.png"
+            if _has_hypercharge(brawler)
+            else "Picsart_26-10-17_23-04-28-907.png"
+        )
+        path = RESOURCES_DIR / filename
+        if path.exists():
+            try:
+                with Image.open(path) as source:
+                    badge = source.convert("RGBA")
+                badge = ImageOps.fit(badge, (size, size), method=Image.Resampling.LANCZOS)
+                canvas.alpha_composite(badge, (int(x), int(y)))
+                return
+            except (OSError, ValueError):
+                pass
+
+    # Below Power 11: black circular badge with a white level number.
+    badge_draw = ImageDraw.Draw(canvas)
+    badge_draw.ellipse((x, y, x + size - 1, y + size - 1),
+                       fill=(0, 0, 0, 245), outline=(255, 255, 255, 230), width=1)
+    font = _font(10, True)
+    box = badge_draw.textbbox((0, 0), str(value), font=font)
+    text_w, text_h = box[2] - box[0], box[3] - box[1]
+    badge_draw.text((x + (size - text_w) / 2, y + (size - text_h) / 2 - box[1]),
+                    str(value), font=font, fill="#ffffff")
+
+
 def _item_count(brawlers, keys):
     total = 0
     for brawler in brawlers:
@@ -414,7 +478,10 @@ def generate_cards(player, brawlers, mode):
             continue
 
         portrait_path = portraits.get(_key(name))
-        _draw_portrait(base, portrait_path, x + 5, y + 3, 42, 42)
+        portrait_x, portrait_y = x + 5, y + 3
+        _draw_portrait(base, portrait_path, portrait_x, portrait_y, 42, 42)
+        if mode == "power":
+            _draw_power_badge(base, brawler, portrait_x, portrait_y)
 
         draw = ImageDraw.Draw(base)
         _draw_centered_text_with_emoji(
@@ -424,22 +491,15 @@ def generate_cards(player, brawlers, mode):
         )
 
         value = int(brawler.get(metric_key, 0) or 0)
-        if mode == "power":
-            label = f"СИЛА {value}"
-            pill_color = (96, 56, 150, 255)
-        else:
-            label = f"{value:,}".replace(",", " ")
-            pill_color = (130, 86, 30, 255)
-        draw.rounded_rectangle(
-            (x + 8, y + 68, x + CELL_W - 8, y + 84),
-            radius=6,
-            fill=pill_color,
-        )
         if mode == "trophies":
+            label = f"{value:,}".replace(",", " ")
+            draw.rounded_rectangle(
+                (x + 8, y + 68, x + CELL_W - 8, y + 84),
+                radius=6,
+                fill=(130, 86, 30, 255),
+            )
             _resource_icon(base, "icon_trophy.png", x + 17, y + 68, 15)
             _centered(draw, (x + CELL_W / 2 + 8, y + 68), label, _font(11, True), "#ffffff", CELL_W - 36)
-        else:
-            _centered(draw, (x + CELL_W / 2, y + 68), label, _font(11, True), "#ffffff", CELL_W - 20)
 
     draw = ImageDraw.Draw(base)
     draw.text(
