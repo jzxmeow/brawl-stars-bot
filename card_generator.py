@@ -100,20 +100,18 @@ RARITY_BY_KEY = {
 # expose Hypercharge ownership, so also check any field present in the response.
 HYPERCHARGE_BRAWLERS = {
     _key(name) for name in [
-        "Shelly", "Colt", "Bull", "Brock", "Jessie", "Nita", "Dynamike",
-        "Tick", "Rico", "Jacky", "Penny", "Carl", "8-Bit", "Bo", "Emz",
-        "Stu", "El Primo", "Rosa", "Barley", "Poco", "Frank", "Bibi",
-        "Bea", "Nani", "Edgar", "Griff", "Grom", "Bonnie", "Ash", "Lola",
-        "Sam", "Mandy", "Maisie", "Hank", "Pearl", "Larry & Lawrie",
-        "Angelo", "Berry", "Shade", "Meeple", "Mortis", "Tara", "Gene",
-        "Max", "Sprout", "Lou", "Byron", "Ruffs", "Squeak", "Buzz", "Fang",
-        "Eve", "Janet", "Otis", "Buster", "Gray", "R-T", "Willow", "Doug",
-        "Chuck", "Charlie", "Mico", "Melodie", "Lily", "Clancy", "Moe",
-        "Juju", "Ollie", "Lumi", "Finx", "Jae-Yong", "Alli", "Mina",
-        "Ziggy", "Gigi", "Glowy", "Najia", "Damian", "Starr Nova", "Wendy",
-        "Cosmo", "Vince", "Spike", "Crow", "Leon", "Sandy", "Surge", "Amber",
-        "Meg", "Chester", "Cordelius", "Kit", "Draco", "Kenji", "Pierce",
-        "Nori", "Kaze", "Sirius",
+        "8-Bit", "Amber", "Angelo", "Ash", "Barley", "Bea", "Belle", "Berry",
+        "Bibi", "Bo", "Bonnie", "Bolt", "Brock", "Bull", "Buster", "Buzz",
+        "Carl", "Charlie", "Chester", "Chuck", "Clancy", "Colette", "Colt",
+        "Cordelius", "Crow", "Darryl", "Doug", "Draco", "Dynamike", "Edgar",
+        "El Primo", "Emz", "Eve", "Fang", "Frank", "Gale", "Gene", "Gray",
+        "Griff", "Grom", "Gus", "Hank", "Jacky", "Janet", "Jessie", "Kenji",
+        "Kit", "Leon", "Lily", "Lola", "Lou", "Lumi", "Maisie", "Mandy",
+        "Max", "Meg", "Melodie", "Mico", "Moe", "Mortis", "Mr. P", "Nani",
+        "Nita", "Nori", "Otis", "Pearl", "Penny", "Piper", "Poco", "R-T",
+        "Rico", "Rosa", "Ruffs", "Sam", "Sandy", "Shade", "Shelly",
+        "Spike", "Sprout", "Squeak", "Starr Nova", "Stu", "Surge", "Tara",
+        "Tick", "Wendy", "Willow", "Sirius", "Najia",
     ]
 }
 
