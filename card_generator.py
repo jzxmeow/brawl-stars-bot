@@ -6,6 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent
 PORTRAITS_DIR = ROOT / "portraits"
+RESOURCES_DIR = ROOT / "resourses"
 
 # One landscape image with exactly 108 slots: 12 columns x 9 rows.
 WIDTH = 1920
@@ -131,6 +132,68 @@ def _centered(draw, xy, text, font, fill, max_width=None):
     draw.text((xy[0] - (box[2] - box[0]) / 2, xy[1]), str(text), font=font, fill=fill)
 
 
+def _resource_icon(canvas, filename, x, y, size):
+    """Paste a small transparent icon from the repository resources folder."""
+    path = RESOURCES_DIR / filename
+    if not path.exists():
+        return False
+    try:
+        with Image.open(path) as source:
+            icon = source.convert("RGBA")
+        icon.thumbnail((size, size), Image.Resampling.LANCZOS)
+        canvas.alpha_composite(icon, (int(x + (size - icon.width) / 2),
+                                      int(y + (size - icon.height) / 2)))
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def _item_count(brawlers, keys):
+    total = 0
+    for brawler in brawlers:
+        value = None
+        for key in keys:
+            if key in brawler:
+                value = brawler.get(key)
+                break
+        if isinstance(value, list):
+            total += len(value)
+        elif isinstance(value, dict):
+            total += 1
+        elif value is True:
+            total += 1
+    return total
+
+
+def _draw_power_resource_summary(canvas, draw, brawlers):
+    # Gadget and Star Power lists are returned by the official player endpoint.
+    gadgets = _item_count(brawlers, ("gadgets", "gadget"))
+    star_powers = _item_count(brawlers, ("starPowers", "star_powers", "starPowersOwned"))
+    gears = _item_count(brawlers, ("gears", "gear"))
+
+    # Hypercharge ownership is not consistently exposed by the official API.
+    # If the response contains a hypercharge field, count it; otherwise show unavailable,
+    # rather than incorrectly treating every Power 11 brawler as owning one.
+    has_hypercharge_field = any(
+        any(key in brawler for key in ("hypercharge", "hyperCharge", "hypercharges"))
+        for brawler in brawlers
+    )
+    hypercharges = _item_count(brawlers, ("hypercharge", "hyperCharge", "hypercharges"))
+
+    items = [
+        ("gadget.png", f"{gadgets}/216"),
+        ("starpower.png", f"{star_powers}/216"),
+        ("gear.png", f"{gears}"),
+        ("hypercharge.png", f"{hypercharges}/104" if has_hypercharge_field else "н/д"),
+    ]
+    start_x = 850
+    item_w = 178
+    for i, (filename, label) in enumerate(items):
+        x = start_x + i * item_w
+        _resource_icon(canvas, filename, x, 50, 30)
+        draw.text((x + 36, 56), label, font=_font(17, True), fill="#f0e7ff")
+
+
 def _draw_portrait(canvas, path, x, y, max_w, max_h):
     if not path or not path.exists():
         return False
@@ -194,6 +257,10 @@ def generate_cards(player, brawlers, mode):
     _centered(draw, (stats_x + 136, 43), f"{len(sorted_brawlers)} / {SLOTS}", _font(27, True), "#ffffff")
     _centered(draw, (stats_x + 136, 82), "БОЙЦОВ НА АККАУНТЕ", _font(13, True), "#d9c4ff")
 
+    # Resource counters are shown only on the Power Levels card.
+    if mode == "power":
+        _draw_power_resource_summary(base, draw, sorted_brawlers)
+
     # Always draw all 108 cells. Empty slots use a muted purple fill and a question mark.
     for i in range(SLOTS):
         row, col = divmod(i, COLUMNS)
@@ -246,14 +313,18 @@ def generate_cards(player, brawlers, mode):
             label = f"СИЛА {value}"
             pill_color = (96, 56, 150, 255)
         else:
-            label = f"🏆 {value:,}".replace(",", " ")
+            label = f"{value:,}".replace(",", " ")
             pill_color = (130, 86, 30, 255)
         draw.rounded_rectangle(
             (x + 8, y + 68, x + CELL_W - 8, y + 84),
             radius=6,
             fill=pill_color,
         )
-        _centered(draw, (x + CELL_W / 2, y + 68), label, _font(11, True), "#ffffff", CELL_W - 20)
+        if mode == "trophies":
+            _resource_icon(base, "icon_trophy.png", x + 17, y + 68, 15)
+            _centered(draw, (x + CELL_W / 2 + 8, y + 68), label, _font(11, True), "#ffffff", CELL_W - 36)
+        else:
+            _centered(draw, (x + CELL_W / 2, y + 68), label, _font(11, True), "#ffffff", CELL_W - 20)
 
     draw = ImageDraw.Draw(base)
     draw.text(
