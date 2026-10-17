@@ -111,7 +111,7 @@ HYPERCHARGE_BRAWLERS = {
         "Nita", "Nori", "Otis", "Pearl", "Penny", "Piper", "Poco", "R-T",
         "Rico", "Rosa", "Ruffs", "Sam", "Sandy", "Shade", "Shelly",
         "Spike", "Sprout", "Squeak", "Starr Nova", "Stu", "Surge", "Tara",
-        "Tick", "Wendy", "Willow", "Sirius", "Najia",
+        "Tick", "Wendy", "Willow", "Najia",
     ]
 }
 
