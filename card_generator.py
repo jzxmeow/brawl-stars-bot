@@ -1,5 +1,6 @@
 import io
 import re
+import requests
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -132,6 +133,79 @@ def _centered(draw, xy, text, font, fill, max_width=None):
     draw.text((xy[0] - (box[2] - box[0]) / 2, xy[1]), str(text), font=font, fill=fill)
 
 
+def _draw_player_avatar(canvas, player, x, y, size):
+    """Fetch the player's profile icon from the Brawlify public asset CDN."""
+    icon = player.get("icon") or {}
+    icon_id = icon.get("id") if isinstance(icon, dict) else None
+    avatar = None
+    if icon_id is not None:
+        try:
+            response = requests.get(
+                f"https://cdn.brawlify.com/profile-icons/regular/{int(icon_id)}.png",
+                timeout=4,
+            )
+            if response.ok:
+                avatar = Image.open(io.BytesIO(response.content)).convert("RGBA")
+        except (requests.RequestException, OSError, ValueError, TypeError):
+            avatar = None
+
+    # Draw a clean fallback even if the CDN is temporarily unreachable.
+    if avatar is None:
+        avatar = Image.new("RGBA", (size, size), (67, 42, 98, 255))
+        fallback_draw = ImageDraw.Draw(avatar)
+        _centered(fallback_draw, (size / 2, size / 13), "?", _font(38, True), "#eee5ff")
+
+    avatar.thumbnail((size, size), Image.Resampling.LANCZOS)
+    square = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    square.alpha_composite(avatar, ((size - avatar.width) // 2, (size - avatar.height) // 2))
+    mask = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(mask).ellipse((1, 1, size - 2, size - 2), fill=255)
+    square.putalpha(mask)
+    canvas.alpha_composite(square, (x, y))
+    ImageDraw.Draw(canvas).ellipse(
+        (x, y, x + size - 1, y + size - 1),
+        outline=(177, 132, 236, 255),
+        width=3,
+    )
+
+
+def _draw_text_with_emoji(canvas, xy, text, font, fill):
+    """Draw text and use Twemoji PNGs for emoji glyphs missing from server fonts."""
+    draw = ImageDraw.Draw(canvas)
+    x, y = xy
+    emoji_ranges = (
+        (0x1F000, 0x1FAFF), (0x2600, 0x27BF), (0x2300, 0x23FF),
+        (0x1F1E6, 0x1F1FF),
+    )
+    for char in str(text):
+        cp = ord(char)
+        is_emoji = any(start <= cp <= end for start, end in emoji_ranges)
+        if is_emoji:
+            code = f"{cp:x}"
+            try:
+                response = requests.get(
+                    f"https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/72x72/{code}.png",
+                    timeout=2,
+                )
+                if response.ok:
+                    with Image.open(io.BytesIO(response.content)) as source:
+                        glyph = source.convert("RGBA")
+                    glyph.thumbnail((font.size + 2, font.size + 2), Image.Resampling.LANCZOS)
+                    canvas.alpha_composite(glyph, (int(x), int(y + max(0, (font.size - glyph.height) / 2))))
+                    x += font.size + 3
+                    continue
+            except (requests.RequestException, OSError, ValueError):
+                pass
+        draw = ImageDraw.Draw(canvas)
+        draw.text((int(x), int(y)), char, font=font, fill=fill)
+        try:
+            advance = draw.textlength(char, font=font)
+        except AttributeError:
+            box = draw.textbbox((0, 0), char, font=font)
+            advance = box[2] - box[0]
+        x += max(1, advance)
+
+
 def _resource_icon(canvas, filename, x, y, size):
     """Paste a small transparent icon from the repository resources folder."""
     path = RESOURCES_DIR / filename
@@ -233,17 +307,18 @@ def generate_cards(player, brawlers, mode):
         outline=(100, 69, 146, 190),
         width=2,
     )
-    draw.text((48, 30), "META HELPER", font=_font(20, True), fill="#c8a4ff")
-    draw.text((48, 58), title, font=_font(34, True), fill="#ffffff")
-
     player_name = str(player.get("name", "Неизвестный игрок"))
     tag = str(player.get("tag", "")).lstrip("#")
-    draw.text(
-        (50, 103),
-        _fit_text(draw, f"{player_name}  •  #{tag}", _font(18, True), 760),
-        font=_font(18, True),
-        fill="#eee8ff",
-    )
+
+    # Player avatar on the far left, with the tag directly underneath.
+    _draw_player_avatar(base, player, 48, 31, 70)
+    _centered(draw, (83, 105), f"#{tag}", _font(13, True), "#d9c4ff", 120)
+
+    # The nickname is the main header element; title/brand are already in the footer.
+    draw = ImageDraw.Draw(base)
+    name_font = _font(40, True)
+    nickname = _fit_text(draw, player_name, name_font, 660)
+    _draw_text_with_emoji(base, (140, 47), nickname, name_font, "#ffffff")
 
     stats_x = WIDTH - 320
     draw.rounded_rectangle(
