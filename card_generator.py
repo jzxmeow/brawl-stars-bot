@@ -19,6 +19,7 @@ MARGIN_X = 24
 GRID_TOP = 150
 CELL_W = 150
 CELL_H = 96
+PORTRAIT_W = 62
 GAP_X = 6
 GAP_Y = 4
 FOOTER_Y = 1090
@@ -192,13 +193,7 @@ def _draw_player_avatar(canvas, player, x, y, size):
     avatar = avatar.convert("RGBA")
     avatar = ImageOps.fit(avatar, (size, size), method=Image.Resampling.LANCZOS)
     canvas.alpha_composite(avatar, (x, y))
-    # Thin black square outline fitted exactly around the avatar.
-    ImageDraw.Draw(canvas).rectangle(
-        (x, y, x + size - 1, y + size - 1),
-        outline=(0, 0, 0, 255),
-        width=3,
-    )
-
+ 
 
 def _draw_text_with_emoji(canvas, xy, text, font, fill):
     """Draw text and use Twemoji PNGs for emoji glyphs missing from server fonts."""
@@ -318,10 +313,12 @@ def _draw_power_badge(canvas, brawler, cell_x, cell_y):
             except (OSError, ValueError):
                 pass
 
-    # Below Power 11: black circular badge with a white level number.
+    # Below Power 11: square black badge, no outline; only the number is white.
     badge_draw = ImageDraw.Draw(canvas)
-    badge_draw.ellipse((x, y, x + size - 1, y + size - 1),
-                       fill=(0, 0, 0, 245), outline=(255, 255, 255, 230), width=1)
+    badge_draw.rectangle(
+        (x, y, x + size - 1, y + size - 1),
+        fill=(0, 0, 0, 245),
+    )
     font = _font(13, True)
     box = badge_draw.textbbox((0, 0), str(value), font=font)
     text_w, text_h = box[2] - box[0], box[3] - box[1]
@@ -384,13 +381,7 @@ def _draw_portrait(canvas, path, x, y, max_w, max_h):
             portrait, (max_w, max_h), method=Image.Resampling.LANCZOS
         )
         canvas.alpha_composite(portrait, (x, y))
-        # Thin black square border exactly around the character portrait.
-        ImageDraw.Draw(canvas).rectangle(
-            (x, y, x + max_w - 1, y + max_h - 1),
-            outline=(0, 0, 0, 255),
-            width=2,
-        )
-        return True
+         return True
     except (OSError, ValueError):
         return False
 
@@ -483,28 +474,31 @@ def generate_cards(player, brawlers, mode):
             continue
 
         portrait_path = portraits.get(_key(name))
-        portrait_x, portrait_y = x + 5, y + 3
-        _draw_portrait(base, portrait_path, portrait_x, portrait_y, 50, 50)
+        # Large portrait flush to the left edge, filling the full cell height.
+        portrait_x, portrait_y = x, y
+        _draw_portrait(base, portrait_path, portrait_x, portrait_y, PORTRAIT_W, CELL_H)
         if mode == "power":
             _draw_power_badge(base, brawler, x, y)
 
         draw = ImageDraw.Draw(base)
+        text_left = x + PORTRAIT_W + 3
+        text_width = CELL_W - PORTRAIT_W - 7
         _draw_centered_text_with_emoji(
-            base, x + CELL_W / 2, y + 58,
-            _fit_text(draw, name, _font(13, True), CELL_W - 8),
-            _font(13, True), "#ffffff", CELL_W - 8,
+            base, text_left + text_width / 2, y + 20,
+            _fit_text(draw, name, _font(12, True), text_width),
+            _font(12, True), "#ffffff", text_width,
         )
 
         value = int(brawler.get(metric_key, 0) or 0)
         if mode == "trophies":
             label = f"{value:,}".replace(",", " ")
             draw.rounded_rectangle(
-                (x + 8, y + 77, x + CELL_W - 8, y + 92),
-                radius=6,
+                (text_left, y + 66, x + CELL_W - 7, y + 87),
+                radius=5,
                 fill=(130, 86, 30, 255),
             )
-            _resource_icon(base, "icon_trophy.png", x + 17, y + 77, 15)
-            _centered(draw, (x + CELL_W / 2 + 8, y + 77), label, _font(12, True), "#ffffff", CELL_W - 36)
+            _resource_icon(base, "icon_trophy.png", text_left + 2, y + 69, 15)
+            _centered(draw, (text_left + text_width / 2 + 7, y + 69), label, _font(12, True), "#ffffff", text_width - 20)
 
     draw = ImageDraw.Draw(base)
     draw.text(
