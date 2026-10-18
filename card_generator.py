@@ -278,7 +278,7 @@ def _has_hypercharge(brawler):
     for key in ("hypercharge", "hyperCharge", "hypercharges"):
         value = brawler.get(key)
         if value:
-            return True
+           return True
     return _key(brawler.get("name", "")) in HYPERCHARGE_BRAWLERS
 
 
