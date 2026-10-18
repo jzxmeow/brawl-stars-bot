@@ -285,9 +285,11 @@ def _has_hypercharge(brawler):
 def _draw_power_badge(canvas, brawler, cell_x, cell_y):
     """Draw a clearly visible power badge in the top-right corner of each brawler cell."""
     value = int(brawler.get("power", 0) or 0)
-    size = 50 if value == 11 and _has_hypercharge(brawler) else 44
-    x = cell_x + CELL_W - size - 4
-    y = cell_y + 3
+    has_hypercharge = value == 11 and _has_hypercharge(brawler)
+    # Hypercharge artwork is intentionally oversized and tucked into the top-right.
+    size = 82 if has_hypercharge else 44
+    x = cell_x + CELL_W - size - (0 if has_hypercharge else 4)
+    y = cell_y - 7 if has_hypercharge else cell_y + 3
 
     if value == 11:
         filename = (
@@ -320,7 +322,7 @@ def _draw_power_badge(canvas, brawler, cell_x, cell_y):
         radius=8,
         fill=(0, 0, 0, 245),
     )
-    font = _font(13, True)
+    font = _font(21, True)
     box = badge_draw.textbbox((0, 0), str(value), font=font)
     text_w, text_h = box[2] - box[0], box[3] - box[1]
     badge_draw.text((x + (size - text_w) / 2, y + (size - text_h) / 2 - box[1]),
@@ -502,7 +504,8 @@ def generate_cards(player, brawlers, mode):
         font=_font(14, True),
         fill="#9e8bb9",
     )
-    _centered(draw, (WIDTH - 100, FOOTER_Y), "POWER / TROPHIES", _font(13, True), "#e8dcff")
+    footer_mode = "СИЛА" if mode == "power" else "КУБКИ"
+    _centered(draw, (WIDTH - 100, FOOTER_Y), footer_mode, _font(16, True), "#e8dcff")
 
     output = io.BytesIO()
     base.convert("RGB").save(output, format="JPEG", quality=91, optimize=True)
