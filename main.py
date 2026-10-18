@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import time
@@ -115,7 +116,7 @@ async def generate_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         player_data["tag"] = tag
-        pages = generate_cards(player_data, brawlers, mode)
+        pages = await asyncio.to_thread(generate_cards, player_data, brawlers, mode)
         if not pages:
             await status_message.edit_text("Не нашёл бойцов для генерации карточки.")
             return
