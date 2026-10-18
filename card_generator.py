@@ -9,20 +9,20 @@ ROOT = Path(__file__).resolve().parent
 PORTRAITS_DIR = ROOT / "portraits"
 RESOURCES_DIR = ROOT / "resourses"
 
-# One landscape image with exactly 108 slots: 12 columns x 9 rows.
-WIDTH = 1920
-HEIGHT = 1120
-COLUMNS = 12
-ROWS = 9
+# One image with 117 slots: 9 columns x 13 rows.
+WIDTH = 1600
+HEIGHT = 1600
+COLUMNS = 9
+ROWS = 13
 SLOTS = COLUMNS * ROWS
-MARGIN_X = 24
+MARGIN_X = 20
 GRID_TOP = 150
-CELL_W = 150
-CELL_H = 96
-PORTRAIT_W = 62
-GAP_X = 6
-GAP_Y = 4
-FOOTER_Y = 1090
+CELL_W = 166
+CELL_H = 100
+PORTRAIT_W = 100
+GAP_X = 7
+GAP_Y = 5
+FOOTER_Y = 1550
 
 # Muted versions of the game's recognizable rarity colors.
 RARITY_COLORS = {
@@ -313,10 +313,11 @@ def _draw_power_badge(canvas, brawler, cell_x, cell_y):
             except (OSError, ValueError):
                 pass
 
-    # Below Power 11: square black badge, no outline; only the number is white.
+    # Below Power 11: softly rounded black rectangle, no outline.
     badge_draw = ImageDraw.Draw(canvas)
-    badge_draw.rectangle(
+    badge_draw.rounded_rectangle(
         (x, y, x + size - 1, y + size - 1),
+        radius=8,
         fill=(0, 0, 0, 245),
     )
     font = _font(13, True)
@@ -439,7 +440,7 @@ def generate_cards(player, brawlers, mode):
     if mode == "power":
         _draw_power_resource_summary(base, draw, sorted_brawlers)
 
-    # Always draw all 108 cells. Empty slots use a muted purple fill and a question mark.
+    # Always draw all 117 cells. Empty slots use a muted purple fill and a question mark.
     for i in range(SLOTS):
         row, col = divmod(i, COLUMNS)
         x = MARGIN_X + col * (CELL_W + GAP_X)
@@ -474,36 +475,30 @@ def generate_cards(player, brawlers, mode):
             continue
 
         portrait_path = portraits.get(_key(name))
-        # Large portrait flush to the left edge, filling the full cell height.
+        # Large portrait fills the cell height; names are intentionally hidden.
         portrait_x, portrait_y = x, y
         _draw_portrait(base, portrait_path, portrait_x, portrait_y, PORTRAIT_W, CELL_H)
         if mode == "power":
             _draw_power_badge(base, brawler, x, y)
 
-        draw = ImageDraw.Draw(base)
-        text_left = x + PORTRAIT_W + 3
-        text_width = CELL_W - PORTRAIT_W - 7
-        _draw_centered_text_with_emoji(
-            base, text_left + text_width / 2, y + 20,
-            _fit_text(draw, name, _font(12, True), text_width),
-            _font(12, True), "#ffffff", text_width,
-        )
-
-        value = int(brawler.get(metric_key, 0) or 0)
         if mode == "trophies":
+            value = int(brawler.get(metric_key, 0) or 0)
             label = f"{value:,}".replace(",", " ")
+            text_left = x + PORTRAIT_W + 4
+            text_width = CELL_W - PORTRAIT_W - 8
+            draw = ImageDraw.Draw(base)
             draw.rounded_rectangle(
-                (text_left, y + 66, x + CELL_W - 7, y + 87),
-                radius=5,
+                (text_left, y + 35, x + CELL_W - 6, y + 65),
+                radius=7,
                 fill=(130, 86, 30, 255),
             )
-            _resource_icon(base, "icon_trophy.png", text_left + 2, y + 69, 15)
-            _centered(draw, (text_left + text_width / 2 + 7, y + 69), label, _font(12, True), "#ffffff", text_width - 20)
+            _resource_icon(base, "icon_trophy.png", text_left + 2, y + 42, 16)
+            _centered(draw, (text_left + text_width / 2 + 8, y + 40), label, _font(12, True), "#ffffff", text_width - 20)
 
     draw = ImageDraw.Draw(base)
     draw.text(
         (MARGIN_X, FOOTER_Y),
-        "META HELPER  •  BRAWL STARS  •  108 СЛОТОВ",
+        "META HELPER  •  BRAWL STARS  •  117 СЛОТОВ",
         font=_font(14, True),
         fill="#9e8bb9",
     )
@@ -513,5 +508,5 @@ def generate_cards(player, brawlers, mode):
     base.convert("RGB").save(output, format="JPEG", quality=91, optimize=True)
     output.seek(0)
     output.name = f"meta_helper_{mode}.jpg"
-    caption = f"{title.title()} • {player_name} • 108 ячеек"
+    caption = f"{title.title()} • {player_name} • 117 ячеек"
     return [(output, caption)]
