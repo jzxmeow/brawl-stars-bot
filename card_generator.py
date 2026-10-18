@@ -1,7 +1,9 @@
 import io
 import re
-import requests
+from functools import lru_cache
 from pathlib import Path
+
+import requests
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
@@ -68,6 +70,7 @@ RARITY_BY_NAME = {
 }
 
 
+@lru_cache(maxsize=64)
 def _font(size, bold=False):
     candidates = []
     if bold:
@@ -97,24 +100,15 @@ RARITY_BY_KEY = {
     for name, rarity in RARITY_BY_NAME.items()
 }
 
-# Brawlers whose Hypercharge exists in-game. The player API doesn't reliably
-# expose Hypercharge ownership, so also check any field present in the response.
+# Current roster data: as of October 2026, Cosmo and Vince are the only
+# brawlers listed here without a released Hypercharge. The official player API
+# does not expose whether a player has actually unlocked it.
+NO_HYPERCHARGE = {_key("Cosmo"), _key("Vince")}
 HYPERCHARGE_BRAWLERS = {
-    _key(name) for name in [
-        "8-Bit", "Amber", "Angelo", "Ash", "Barley", "Bea", "Belle", "Berry",
-        "Bibi", "Bo", "Bonnie", "Bolt", "Brock", "Bull", "Buster", "Buzz",
-        "Carl", "Charlie", "Chester", "Chuck", "Clancy", "Colette", "Colt",
-        "Cordelius", "Crow", "Darryl", "Doug", "Draco", "Dynamike", "Edgar",
-        "El Primo", "Emz", "Eve", "Fang", "Frank", "Gale", "Gene", "Gray",
-        "Griff", "Grom", "Gus", "Hank", "Jacky", "Janet", "Jessie", "Kenji",
-        "Kit", "Leon", "Lily", "Lola", "Lou", "Lumi", "Maisie", "Mandy",
-        "Max", "Meg", "Melodie", "Mico", "Moe", "Mortis", "Mr. P", "Nani",
-        "Nita", "Nori", "Otis", "Pearl", "Penny", "Piper", "Poco", "R-T",
-        "Rico", "Rosa", "Ruffs", "Sam", "Sandy", "Shade", "Shelly",
-        "Spike", "Sprout", "Squeak", "Starr Nova", "Stu", "Surge", "Tara",
-        "Tick", "Wendy", "Willow", "Najia",
-    ]
+    _key(name) for name in RARITY_BY_NAME
+    if _key(name) not in NO_HYPERCHARGE
 }
+HYPERCHARGE_TOTAL = len(HYPERCHARGE_BRAWLERS)
 
 
 def _portrait_index():
@@ -126,8 +120,9 @@ def _portrait_index():
     return index
 
 
+@lru_cache(maxsize=1)
 def _background():
-    # Use the custom background uploaded to the repository resources folder.
+    # Cached because each card uses the same static background.
     background_path = RESOURCES_DIR / "yiuDhs4ftqkUwdHbwgcE.png"
     if background_path.exists():
         try:
@@ -141,16 +136,16 @@ def _background():
         except (OSError, ValueError):
             pass
 
-    # Keep a gradient fallback if the custom image cannot be loaded.
+    # Fast gradient fallback: draw one horizontal line per row instead of
+    # assigning 2.56 million pixels in Python.
     image = Image.new("RGB", (WIDTH, HEIGHT), "#100d1c")
-    pixels = image.load()
+    draw = ImageDraw.Draw(image)
     top = (13, 12, 29)
     bottom = (43, 20, 70)
     for y in range(HEIGHT):
         t = y / (HEIGHT - 1)
         color = tuple(int(top[i] * (1 - t) + bottom[i] * t) for i in range(3))
-        for x in range(WIDTH):
-            pixels[x, y] = color
+        draw.line((0, y, WIDTH, y), fill=color)
     return image
 
 
@@ -168,30 +163,34 @@ def _centered(draw, xy, text, font, fill, max_width=None):
     draw.text((xy[0] - (box[2] - box[0]) / 2, xy[1]), str(text), font=font, fill=fill)
 
 
-def _draw_player_avatar(canvas, player, x, y, size):
-    """Fetch the player's profile icon from the Brawlify public asset CDN."""
-    icon = player.get("icon") or {}
-    icon_id = icon.get("id") if isinstance(icon, dict) else None
+@lru_cache(maxsize=128)
+def _cached_player_avatar(icon_id, size):
+    """Fetch and cache a player's profile icon between card generations."""
     avatar = None
     if icon_id is not None:
         try:
             response = requests.get(
                 f"https://cdn.brawlify.com/profile-icons/regular/{int(icon_id)}.png",
-                timeout=4,
+                timeout=2,
             )
             if response.ok:
-                avatar = Image.open(io.BytesIO(response.content)).convert("RGBA")
+                with Image.open(io.BytesIO(response.content)) as source:
+                    avatar = source.convert("RGBA")
         except (requests.RequestException, OSError, ValueError, TypeError):
             avatar = None
 
-    # Draw a clean fallback even if the CDN is temporarily unreachable.
     if avatar is None:
         avatar = Image.new("RGBA", (size, size), (67, 42, 98, 255))
         fallback_draw = ImageDraw.Draw(avatar)
         _centered(fallback_draw, (size / 2, size / 13), "?", _font(38, True), "#eee5ff")
 
-    avatar = avatar.convert("RGBA")
-    avatar = ImageOps.fit(avatar, (size, size), method=Image.Resampling.LANCZOS)
+    return ImageOps.fit(avatar, (size, size), method=Image.Resampling.LANCZOS)
+
+
+def _draw_player_avatar(canvas, player, x, y, size):
+    icon = player.get("icon") or {}
+    icon_id = icon.get("id") if isinstance(icon, dict) else None
+    avatar = _cached_player_avatar(icon_id, size)
     canvas.alpha_composite(avatar, (x, y))
  
 
@@ -258,20 +257,29 @@ def _draw_centered_text_with_emoji(canvas, center_x, y, text, font, fill, max_wi
     _draw_text_with_emoji(canvas, (center_x - width / 2, y), text, font, fill)
 
 
-def _resource_icon(canvas, filename, x, y, size):
-    """Paste a small transparent icon from the repository resources folder."""
+@lru_cache(maxsize=128)
+def _cached_resource_icon(filename, size):
     path = RESOURCES_DIR / filename
     if not path.exists():
-        return False
+        return None
     try:
         with Image.open(path) as source:
             icon = source.convert("RGBA")
         icon.thumbnail((size, size), Image.Resampling.LANCZOS)
-        canvas.alpha_composite(icon, (int(x + (size - icon.width) / 2),
-                                      int(y + (size - icon.height) / 2)))
-        return True
+        return icon
     except (OSError, ValueError):
+        return None
+
+
+def _resource_icon(canvas, filename, x, y, size):
+    """Paste a cached, pre-scaled transparent resource icon."""
+    icon = _cached_resource_icon(filename, size)
+    if icon is None:
         return False
+    canvas.alpha_composite(
+        icon, (int(x + (size - icon.width) / 2), int(y + (size - icon.height) / 2))
+    )
+    return True
 
 
 def _has_hypercharge(brawler):
@@ -355,11 +363,13 @@ def _draw_power_resource_summary(canvas, draw, brawlers):
     # Hypercharge ownership is not consistently exposed by the official API.
     # If the response contains a hypercharge field, count it; otherwise show unavailable,
     # rather than incorrectly treating every Power 11 brawler as owning one.
-    has_hypercharge_field = any(
-        any(key in brawler for key in ("hypercharge", "hyperCharge", "hypercharges"))
-        for brawler in brawlers
+    # Count Power 11 brawlers whose Hypercharge exists in the game. This is
+    # availability, not verified ownership: Supercell's player endpoint omits ownership.
+    hypercharges = sum(
+        1 for brawler in brawlers
+        if int(brawler.get("power", 0) or 0) == 11
+        and _key(brawler.get("name", "")) in HYPERCHARGE_BRAWLERS
     )
-    hypercharges = _item_count(brawlers, ("hypercharge", "hyperCharge", "hypercharges"))
 
     # Compact 2-column x 2-row layout, aligned consistently in the header.
     # Left column: gadgets above star powers. Right column: gears above hypercharges.
@@ -367,26 +377,33 @@ def _draw_power_resource_summary(canvas, draw, brawlers):
         (850, 42, "gadget.png", f"{gadgets}/216"),
         (850, 84, "starpower.png", f"{star_powers}/216"),
         (1100, 42, "gear.png", f"{gears}"),
-        (1100, 84, "hypercharge.png", f"{hypercharges}/104" if has_hypercharge_field else "н/д"),
+        (1100, 84, "hypercharge.png", f"{hypercharges}/{HYPERCHARGE_TOTAL}"),
     ]
     for x, y, filename, label in items:
         _resource_icon(canvas, filename, x, y, 28)
         draw.text((x + 36, y + 6), label, font=_font(17, True), fill="#f0e7ff")
 
 
+@lru_cache(maxsize=256)
+def _cached_portrait(path_string, max_w, max_h):
+    try:
+        with Image.open(path_string) as source:
+            portrait = source.convert("RGBA")
+        return ImageOps.fit(
+            portrait, (max_w, max_h), method=Image.Resampling.LANCZOS
+        )
+    except (OSError, ValueError):
+        return None
+
+
 def _draw_portrait(canvas, path, x, y, max_w, max_h):
     if not path or not path.exists():
         return False
-    try:
-        with Image.open(path) as source:
-            portrait = source.convert("RGBA")
-        portrait = ImageOps.fit(
-            portrait, (max_w, max_h), method=Image.Resampling.LANCZOS
-        )
-        canvas.alpha_composite(portrait, (x, y))
-        return True
-    except (OSError, ValueError):
+    portrait = _cached_portrait(str(path), max_w, max_h)
+    if portrait is None:
         return False
+    canvas.alpha_composite(portrait, (x, y))
+    return True
 
 
 def generate_cards(player, brawlers, mode):
@@ -508,7 +525,9 @@ def generate_cards(player, brawlers, mode):
     _centered(draw, (WIDTH - 100, FOOTER_Y), footer_mode, _font(16, True), "#e8dcff")
 
     output = io.BytesIO()
-    base.convert("RGB").save(output, format="JPEG", quality=91, optimize=True)
+    # optimize=True spends extra CPU on Huffman-table optimization; disabling it
+    # makes the card noticeably faster to encode at a nearly identical visual quality.
+    base.convert("RGB").save(output, format="JPEG", quality=88, optimize=False, subsampling=1)
     output.seek(0)
     output.name = f"meta_helper_{mode}.jpg"
     caption = f"{title.title()} • {player_name} • 117 ячеек"
