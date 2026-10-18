@@ -381,7 +381,7 @@ def _draw_portrait(canvas, path, x, y, max_w, max_h):
             portrait, (max_w, max_h), method=Image.Resampling.LANCZOS
         )
         canvas.alpha_composite(portrait, (x, y))
-         return True
+        return True
     except (OSError, ValueError):
         return False
 
