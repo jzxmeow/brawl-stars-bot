@@ -100,9 +100,9 @@ RARITY_BY_KEY = {
     for name, rarity in RARITY_BY_NAME.items()
 }
 
-# Current roster data: as of October 2026, Cosmo and Vince are the only
-# brawlers listed here without a released Hypercharge. The official player API
-# does not expose whether a player has actually unlocked it.
+# Current roster data: as of October 2026, the roster contains 108 brawlers;
+# Cosmo and Vince are the two without a released Hypercharge. The official
+# player API does not expose whether a player has actually unlocked it.
 NO_HYPERCHARGE = {_key("Cosmo"), _key("Vince")}
 HYPERCHARGE_BRAWLERS = {
     _key(name) for name in RARITY_BY_NAME
@@ -194,6 +194,24 @@ def _draw_player_avatar(canvas, player, x, y, size):
     canvas.alpha_composite(avatar, (x, y))
  
 
+@lru_cache(maxsize=256)
+def _cached_twemoji(code, size):
+    """Download and cache an emoji image so repeated card requests do not refetch it."""
+    try:
+        response = requests.get(
+            f"https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/72x72/{code}.png",
+            timeout=1.5,
+        )
+        if response.ok:
+            with Image.open(io.BytesIO(response.content)) as source:
+                glyph = source.convert("RGBA")
+            glyph.thumbnail((size, size), Image.Resampling.LANCZOS)
+            return glyph
+    except (requests.RequestException, OSError, ValueError):
+        pass
+    return None
+
+
 def _draw_text_with_emoji(canvas, xy, text, font, fill):
     """Draw text and use Twemoji PNGs for emoji glyphs missing from server fonts."""
     draw = ImageDraw.Draw(canvas)
@@ -210,20 +228,11 @@ def _draw_text_with_emoji(canvas, xy, text, font, fill):
         is_emoji = any(start <= cp <= end for start, end in emoji_ranges)
         if is_emoji:
             code = f"{cp:x}"
-            try:
-                response = requests.get(
-                    f"https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/72x72/{code}.png",
-                    timeout=2,
-                )
-                if response.ok:
-                    with Image.open(io.BytesIO(response.content)) as source:
-                        glyph = source.convert("RGBA")
-                    glyph.thumbnail((font.size + 2, font.size + 2), Image.Resampling.LANCZOS)
-                    canvas.alpha_composite(glyph, (int(x), int(y + max(0, (font.size - glyph.height) / 2))))
-                    x += font.size + 3
-                    continue
-            except (requests.RequestException, OSError, ValueError):
-                pass
+            glyph = _cached_twemoji(code, font.size + 2)
+            if glyph is not None:
+                canvas.alpha_composite(glyph, (int(x), int(y + max(0, (font.size - glyph.height) / 2))))
+                x += font.size + 3
+                continue
         draw = ImageDraw.Draw(canvas)
         draw.text((int(x), int(y)), char, font=font, fill=fill)
         try:
@@ -290,6 +299,22 @@ def _has_hypercharge(brawler):
     return _key(brawler.get("name", "")) in HYPERCHARGE_BRAWLERS
 
 
+@lru_cache(maxsize=32)
+def _cached_badge_art(filename, size):
+    path = RESOURCES_DIR / filename
+    if not path.exists():
+        return None
+    try:
+        with Image.open(path) as source:
+            art = source.convert("RGBA")
+        art.thumbnail((size, size), Image.Resampling.LANCZOS)
+        badge = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        badge.alpha_composite(art, ((size - art.width) // 2, (size - art.height) // 2))
+        return badge
+    except (OSError, ValueError):
+        return None
+
+
 def _draw_power_badge(canvas, brawler, cell_x, cell_y):
     """Draw a clearly visible power badge in the top-right corner of each brawler cell."""
     value = int(brawler.get("power", 0) or 0)
@@ -305,23 +330,10 @@ def _draw_power_badge(canvas, brawler, cell_x, cell_y):
             if _has_hypercharge(brawler)
             else "Picsart_26-10-17_23-04-28-907.png"
         )
-        path = RESOURCES_DIR / filename
-        if path.exists():
-            try:
-                with Image.open(path) as source:
-                    art = source.convert("RGBA")
-                # Preserve the full icon instead of cropping it; larger canvas
-                # makes the Hypercharge badge easier to recognize.
-                art.thumbnail((size, size), Image.Resampling.LANCZOS)
-                badge = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-                badge.alpha_composite(
-                    art,
-                    ((size - art.width) // 2, (size - art.height) // 2),
-                )
-                canvas.alpha_composite(badge, (int(x), int(y)))
-                return
-            except (OSError, ValueError):
-                pass
+        badge = _cached_badge_art(filename, size)
+        if badge is not None:
+            canvas.alpha_composite(badge, (int(x), int(y)))
+            return
 
     # Below Power 11: softly rounded black rectangle, no outline.
     badge_draw = ImageDraw.Draw(canvas)
@@ -360,9 +372,6 @@ def _draw_power_resource_summary(canvas, draw, brawlers):
     star_powers = _item_count(brawlers, ("starPowers", "star_powers", "starPowersOwned"))
     gears = _item_count(brawlers, ("gears", "gear"))
 
-    # Hypercharge ownership is not consistently exposed by the official API.
-    # If the response contains a hypercharge field, count it; otherwise show unavailable,
-    # rather than incorrectly treating every Power 11 brawler as owning one.
     # Count Power 11 brawlers whose Hypercharge exists in the game. This is
     # availability, not verified ownership: Supercell's player endpoint omits ownership.
     hypercharges = sum(
