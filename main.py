@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from urllib.parse import quote
 
 import requests
@@ -65,6 +66,13 @@ async def player(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(format_api_error(error))
             return
 
+        # Reuse the profile response when the user taps a card button shortly after
+        # /player, avoiding a second official API request on the normal path.
+        context.user_data.setdefault("player_cache", {})[tag] = {
+            "timestamp": time.monotonic(),
+            "data": data,
+        }
+
         keyboard = InlineKeyboardMarkup([[
             InlineKeyboardButton("⚡ Силы бойцов", callback_data=f"card:power:{tag}"),
             InlineKeyboardButton("🏆 Кубки бойцов", callback_data=f"card:trophies:{tag}"),
@@ -88,12 +96,16 @@ async def generate_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
         _, mode, tag = query.data.split(":", 2)
         status_message = await query.message.reply_text("🎨 Собираю портреты и статистику…")
 
-        # The player endpoint already returns the player's brawlers.
-        # Use that response rather than making a second endpoint request.
-        player_data, error = api_get(f"/players/%23{quote(tag, safe='')}")
-        if error:
-            await status_message.edit_text(format_api_error(error))
-            return
+        # Use the cached /player response if it is recent. Fall back to the API
+        # when the user opens an old button or the cache is missing.
+        cached = context.user_data.get("player_cache", {}).get(tag)
+        if cached and time.monotonic() - cached.get("timestamp", 0) < 180:
+            player_data = cached["data"]
+        else:
+            player_data, error = api_get(f"/players/%23{quote(tag, safe='')}")
+            if error:
+                await status_message.edit_text(format_api_error(error))
+                return
 
         brawlers = player_data.get("brawlers", [])
         if not brawlers:
