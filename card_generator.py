@@ -319,10 +319,11 @@ def _draw_power_badge(canvas, brawler, cell_x, cell_y):
     """Draw a clearly visible power badge in the top-right corner of each brawler cell."""
     value = int(brawler.get("power", 0) or 0)
     has_hypercharge = value == 11 and _has_hypercharge(brawler)
-    # Hypercharge artwork is intentionally oversized and tucked into the top-right.
-    size = 82 if has_hypercharge else 44
+    # Hypercharge artwork is oversized, aligned to the top-right, and slightly
+    # overlaps the cell's upper edge for a more prominent badge.
+    size = 96 if has_hypercharge else 44
     x = cell_x + CELL_W - size - (0 if has_hypercharge else 4)
-    y = cell_y - 7 if has_hypercharge else cell_y + 3
+    y = cell_y - 14 if has_hypercharge else cell_y + 3
 
     if value == 11:
         filename = (
@@ -335,12 +336,14 @@ def _draw_power_badge(canvas, brawler, cell_x, cell_y):
             canvas.alpha_composite(badge, (int(x), int(y)))
             return
 
-    # Below Power 11: softly rounded black rectangle, no outline.
+    # Below Power 11: subtle purple outline, kept thin so it doesn't overpower the portrait.
     badge_draw = ImageDraw.Draw(canvas)
     badge_draw.rounded_rectangle(
         (x, y, x + size - 1, y + size - 1),
         radius=8,
         fill=(0, 0, 0, 245),
+        outline=(153, 91, 218, 230),
+        width=2,
     )
     font = _font(21, True)
     box = badge_draw.textbbox((0, 0), str(value), font=font)
