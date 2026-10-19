@@ -11,11 +11,11 @@ ROOT = Path(__file__).resolve().parent
 PORTRAITS_DIR = ROOT / "portraits"
 RESOURCES_DIR = ROOT / "resourses"
 
-# One image with 108 slots: 12 columns x 9 rows.
-WIDTH = 2160
-HEIGHT = 1250
-COLUMNS = 12
-ROWS = 9
+# One image with 108 slots: 9 columns x 12 rows.
+WIDTH = 1600
+HEIGHT = 1600
+COLUMNS = 9
+ROWS = 12
 SLOTS = COLUMNS * ROWS
 MARGIN_X = 20
 GRID_TOP = 150
@@ -24,7 +24,7 @@ CELL_H = 100
 PORTRAIT_W = 100
 GAP_X = 7
 GAP_Y = 5
-FOOTER_Y = 1185
+FOOTER_Y = 1550
 
 # Muted versions of the game's recognizable rarity colors.
 RARITY_COLORS = {
