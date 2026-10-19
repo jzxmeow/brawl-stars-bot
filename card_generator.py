@@ -325,7 +325,8 @@ def _draw_power_badge(canvas, brawler, cell_x, cell_y):
     # Anchor the hypercharge to the cell's top-right corner: 40% of its
     # height protrudes above the cell, with only a small overlap to the right.
     # Regular power badges stay 44px and protrude slightly less in both directions.
-    x = cell_x + CELL_W - size + 12 if has_hypercharge else cell_x + CELL_W - size + 4
+    # Push the oversized Hypercharge artwork farther toward the cell's right edge.
+    x = cell_x + CELL_W - size + 28 if has_hypercharge else cell_x + CELL_W - size + 4
     y = cell_y - int(size * 0.40) if has_hypercharge else cell_y - 5
 
     if value == 11:
