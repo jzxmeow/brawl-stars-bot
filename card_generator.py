@@ -322,8 +322,10 @@ def _draw_power_badge(canvas, brawler, cell_x, cell_y):
     # Hypercharge artwork is oversized, aligned to the top-right, and slightly
     # overlaps the cell's upper edge for a more prominent badge.
     size = 96 if has_hypercharge else 44
-    x = cell_x + CELL_W - size - (0 if has_hypercharge else 4)
-    y = cell_y - 14 if has_hypercharge else cell_y + 3
+    # Put hypercharge at the true top-right of the whole cell (not the portrait),
+    # letting the art extend beyond both the top edge and the right edge.
+    x = cell_x + CELL_W - 58 if has_hypercharge else cell_x + CELL_W - size - 4
+    y = cell_y - 24 if has_hypercharge else cell_y + 3
 
     if value == 11:
         filename = (
