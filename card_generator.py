@@ -11,11 +11,11 @@ ROOT = Path(__file__).resolve().parent
 PORTRAITS_DIR = ROOT / "portraits"
 RESOURCES_DIR = ROOT / "resourses"
 
-# One image with 117 slots: 9 columns x 13 rows.
-WIDTH = 1600
-HEIGHT = 1600
-COLUMNS = 9
-ROWS = 13
+# One image with 108 slots: 12 columns x 9 rows.
+WIDTH = 2160
+HEIGHT = 1250
+COLUMNS = 12
+ROWS = 9
 SLOTS = COLUMNS * ROWS
 MARGIN_X = 20
 GRID_TOP = 150
@@ -24,7 +24,7 @@ CELL_H = 100
 PORTRAIT_W = 100
 GAP_X = 7
 GAP_Y = 5
-FOOTER_Y = 1550
+FOOTER_Y = 1185
 
 # Muted versions of the game's recognizable rarity colors.
 RARITY_COLORS = {
@@ -325,7 +325,7 @@ def _draw_power_badge(canvas, brawler, cell_x, cell_y):
     # Anchor the hypercharge to the cell's top-right corner: 40% of its
     # height protrudes above the cell, with only a small overlap to the right.
     # Regular power badges stay 44px and protrude slightly less in both directions.
-    x = cell_x + CELL_W - size + 6 if has_hypercharge else cell_x + CELL_W - size + 4
+    x = cell_x + CELL_W - size + 12 if has_hypercharge else cell_x + CELL_W - size + 4
     y = cell_y - int(size * 0.40) if has_hypercharge else cell_y - 5
 
     if value == 11:
@@ -474,7 +474,7 @@ def generate_cards(player, brawlers, mode):
     if mode == "power":
         _draw_power_resource_summary(base, draw, sorted_brawlers)
 
-    # Always draw all 117 cells. Empty slots use a muted purple fill and a question mark.
+    # Always draw all 108 cells. Empty slots use a muted purple fill and a question mark.
     for i in range(SLOTS):
         row, col = divmod(i, COLUMNS)
         x = MARGIN_X + col * (CELL_W + GAP_X)
@@ -532,7 +532,7 @@ def generate_cards(player, brawlers, mode):
     draw = ImageDraw.Draw(base)
     draw.text(
         (MARGIN_X, FOOTER_Y),
-        "META HELPER  •  BRAWL STARS  •  117 СЛОТОВ",
+        "META HELPER  •  BRAWL STARS  •  108 СЛОТОВ",
         font=_font(14, True),
         fill="#9e8bb9",
     )
@@ -545,5 +545,5 @@ def generate_cards(player, brawlers, mode):
     base.convert("RGB").save(output, format="JPEG", quality=88, optimize=False, subsampling=1)
     output.seek(0)
     output.name = f"meta_helper_{mode}.jpg"
-    caption = f"{title.title()} • {player_name} • 117 ячеек"
+    caption = f"{title.title()} • {player_name} • 108 ячеек"
     return [(output, caption)]
