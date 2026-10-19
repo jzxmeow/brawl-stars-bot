@@ -6,6 +6,7 @@ from urllib.parse import quote
 
 import requests
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.error import BadRequest
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
 
 from card_generator import generate_cards
@@ -92,7 +93,13 @@ async def player(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def generate_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer("Готовлю карточку…")
+    try:
+        await query.answer("Готовлю карточку…")
+    except BadRequest as exc:
+        if "Query is too old" in str(exc) or "query id is invalid" in str(exc):
+            logging.warning("Callback query expired; continuing card generation.")
+        else:
+            raise
     try:
         _, mode, tag = query.data.split(":", 2)
         status_message = await query.message.reply_text("🎨 Собираю портреты и статистику…")
@@ -135,6 +142,10 @@ async def generate_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    logging.error("Unhandled Telegram update error", exc_info=context.error)
+
+
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
@@ -142,6 +153,7 @@ def main():
     app.add_handler(CallbackQueryHandler(
         generate_card, pattern=r"^card:(power|trophies):[A-Z0-9]+$"
     ))
+    app.add_error_handler(error_handler)
     app.run_polling()
 
 
